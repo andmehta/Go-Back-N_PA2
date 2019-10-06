@@ -7,6 +7,21 @@ a makefile is included in this project. To use the makefile _**TODO**_
 ### Emulator Program (`emulator`)
 Provided by Dr. Maxwell Young as a way to simulate lost/dropped packets. 
 #### How to call the emulator
+`java emulator <receivePort> <sendToClient-Port> <sendToServer-Port> <clientName> <serverName> <seed> <dropProb> <verbose-mode>`
+
+| input  | Meaning |
+| ------- | ------- |
+|`<receivePort>` |emulator's receiving UDP port, used by both client and server |
+|`<sendToClient-Port>`|client's receiving UDP port number |
+|`<sendToServer-Port>`|server's receiving UDP port number |
+|`<clientName>`|client's network address |
+|`<serverName>`|server's network address |
+|`<seed>`|used to seed the random generator |
+|`<dropProb>`|packet discard probability |
+|`<verbose-mode>`|int set to 1, network emulator output internal processing for debugging purposes|
+
+
+#### Example of an emulator call
 `java emulator 6000 6001 6002 localhost localhost 0 0.0 1`
 
 ### Packet class (`packet`)
@@ -35,8 +50,8 @@ Made by students. Takes a text file and sends 30 char chunks of the data to the 
 * Client timer expires, client resends ALL packets outstanding. 
 
 The client produces 2 log files, `clientseqnum.log` and `clientack.log`. These files track the outgoing sequence numbers and incoming sequence numbers respectively. 
-To use type 
 
+#### Command line input
 `java client <emulatorAddress> <emulatorReceivingPort> <emulatorSendingPort> <filename>` 
 
 | input  | Meaning |
@@ -49,6 +64,26 @@ To use type
 #### Example of client call
 `java client localhost 6000 6001 test.txt`
 
-### Server program (`server`) _*TODO*_
+### Server program (`server`) 
 
+#### Command line input
+`java server <emulatorName> <receiveFromEmulator> <sendToEmulator-Port> <fileName>`
 
+| input  | Meaning |
+| ------- | ------- |
+|`<emulatorName>` |host name of the emulator      |
+|`<receiveFromEmulator>`|UDP port used by the server to receive data FROM the emulator |
+|`<sendToEmulator-Port>`|UDP port number used by the emulator to receive ACKs from the server |
+|`<filename>`|name of the text file which received data is written |
+
+#### Example of server call 
+`java server localhost 6002 6000 output.txt`
+
+#### GBN explanation on server side
+
+* check sequence number (`seqnum`)
+* if sequence number is expected, send ACK with same sequence number and write `data` to `filename.txt`
+* if sequence number is NOT expected, discard the packet. and resend ACK from most recent packet
+* if server receives an EOT `type = 2` transmission from the client, server sends EOT ACK `type = 3` back to client. 
+
+Server also writes to `arrival.log` which records sequence numbers of all data packets and the EOT packet from the client. 
