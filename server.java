@@ -13,7 +13,9 @@ import java.io.*;
 
 public class server {
 
-	// Private Variables
+	/*********************
+	 * Private variables * 
+	 *********************/
 	private int UDP_Port_receiving;
 	private int UDP_Port_sending;
 	private int expected_seqnum;
@@ -25,7 +27,9 @@ public class server {
 	private BufferedWriter writer = null;
 	private String emulator;
 
-	// private functions
+	/*********************
+	 * Private Functions * 
+	 *********************/
 	private void writeToTextfile(String info) {
 		try {
 			writer.write(info);
@@ -45,7 +49,7 @@ public class server {
 		}
 	}
 	
-	private void openLogger() {
+	private void openLogger() {//TODO ask about how the LOG should be formatted. SimpleFormatter?
 		logger = Logger.getLogger("myLog");
 		try {
 			fileHandler = new FileHandler("arrival.log");
@@ -67,20 +71,9 @@ public class server {
 		}
 	}
 
-	private String cleanOutputFile(String outputFile) {
-		int period = outputFile.indexOf("."); // find the location of the period
 
-		String subString = "";
-		if (period != -1) {
-			subString = outputFile.substring(0, period); // create a substring that does NOT include the .txt expected
-		}
-
-		return subString;
-	}
-
-	private void writeToArrivalLog(packet arrivedPacket) {
-		String seqnumAsString = String.valueOf(arrivedPacket.getSeqNum());
-		logger.info(seqnumAsString);
+	private void writeToArrivalLog(int seqnum) {
+		logger.info(String.valueOf(seqnum)); 
 	}
 
 	private int moveWindow() {
@@ -90,7 +83,7 @@ public class server {
 	}
 
 	/********************
-	 * Public Functions * *
+	 * Public Functions * 
 	 ********************/
 
 	// Constructor
@@ -100,24 +93,27 @@ public class server {
 		UDP_Port_sending = Integer.parseInt(sendingPort);
 		emulator = emulatorName;
 
+		//Open necessary peripherals
 		openSocket();
 		openLogger();
 		openWriter(outputFileName);
-		
-
 	}
 
 	public boolean receivePacket(packet packet) {
-
+		bool ret = false;
 		if (packet.getSeqNum() == expected_seqnum) {
 			moveWindow();
+			writeToTextfile(packet.getData());
+			ret = true;
 		}
 		
-		//TODO do the rest with the packet, like write info to output and write to arrival.log
-		return true;
+		
+		writeToArrivalLog(packet.getSeqNum());
+		
+		return ret;
 	}
 
-	public void sendACK(packet packet) {
+	public void sendACK(packet packet) {//TODO sendACK back to where it came
 
 	}
 
@@ -134,7 +130,7 @@ public class server {
 		}
 	}
 
-	public void testLog(String info) {
+	public void testLog(String info) { 
 		logger.info(info);
 	}
 
@@ -143,12 +139,8 @@ public class server {
 
 		server testServer = new server("localhost", "6000", "6002", "output.txt");
 		
-
-		testServer.writeToTextfile("test 1");
-		testServer.writeToTextfile(" and ");
-		testServer.writeToTextfile("test 23");
 		
-		// close the socket
+		// close the socket and writer
 		testServer.closeWriter();
 		testServer.closeSocket();
 	}
