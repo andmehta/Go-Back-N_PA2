@@ -1,7 +1,10 @@
 JFLAGS = -g
 JCC = javac
 
-default: client.class server.class 
+default: packet.class client.class server.class
+
+packet.class: packet.java
+	$(JCC) $(JFLAGS) packet.java
 
 client.class: client.java
 	$(JCC) $(JFLAGS) client.java
