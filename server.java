@@ -6,10 +6,20 @@
  *                      *
  ************************/
 
-import java.net.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.io.*;
+import java.util.logging.SimpleFormatter;
 
 public class server {
 
@@ -26,6 +36,7 @@ public class server {
 	private File outputFile = null;
 	private BufferedWriter writer = null;
 	private String emulator;
+	private packet MaxsPacket = null;
 
 	/*********************
 	 * Private Functions * 
@@ -51,13 +62,14 @@ public class server {
 	
 	private void openLogger() {//TODO ask about how the LOG should be formatted. SimpleFormatter? https://stackoverflow.com/questions/15758685/how-to-write-logs-in-text-file-when-using-java-util-logging-logger
 		logger = Logger.getLogger("myLog");
+		SimpleFormatter formatter = new SimpleFormatter();
 		try {
 			fileHandler = new FileHandler("arrival.log");
 		} catch (SecurityException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		fileHandler.setFormatter(formatter);
 		logger.addHandler(fileHandler);
 		logger.setUseParentHandlers(false); // turns off logging to console
 	}
@@ -97,23 +109,84 @@ public class server {
 		openLogger();
 		openWriter(outputFileName);
 	}
-
-	public boolean receivePacket(packet packet) {
-		bool ret = false;
-		if (packet.getSeqNum() == expected_seqnum) {
-			moveWindow();
-			writeToTextfile(packet.getData());
-			ret = true;
-		}
-		
-		
-		writeToArrivalLog(packet.getSeqNum());
-		
-		return ret;
+	
+	public static byte[] toBytes(Object obj) throws IOException {
+		ByteArrayOutputStream b = new ByteArrayOutputStream();
+		ObjectOutputStream o = new ObjectOutputStream(b);
+		o.writeObject(obj);
+		return b.toByteArray();
 	}
 
-	public void sendACK(packet packet) {//TODO sendACK back to where it came
+	public static packet toPacket(byte[] bytes) throws IOException, ClassNotFoundException {
+		ByteArrayInputStream b = new ByteArrayInputStream(bytes);
+		ObjectInputStream o = new ObjectInputStream(b);
+		packet receivedPacket = (packet) o.readObject();
+		
+		return receivedPacket;
+		
+	}
+	
+	public int receivePacket(DatagramPacket datagramPacket) {
+		try {
+			socket.receive(datagramPacket);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+		try {
+			MaxsPacket = toPacket(datagramPacket.getData());
+			if (MaxsPacket.getSeqNum() == expected_seqnum) {
+				moveWindow();
+				writeToTextfile(MaxsPacket.getData());
+			}
+			
+			
+			writeToArrivalLog(MaxsPacket.getSeqNum());
+		} catch (ClassNotFoundException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return MaxsPacket.getType();
+	}
 
+	public void sendACK() {//TODO sendACK back to where it came
+		packet ACK = new packet(0, expected_seqnum, 0, null);
+		
+		try {
+			buf = toBytes(ACK);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		try {
+			socket.send(datagramPacket);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void sendEOT() {//TODO sendACK back to where it came
+		packet EOT = new packet(2, expected_seqnum, 0, null);
+		
+		try {
+			buf = toBytes(EOT);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		try {
+			socket.send(datagramPacket);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void closeSocket() {
@@ -134,13 +207,22 @@ public class server {
 	}
 
 	public static void main(String args[]) {
+		boolean end = false;
 		// server newServer = new server(args[0], args[1], args[2], args[3]);
 
 		server testServer = new server("localhost", "6000", "6002", "output.txt");
 		
+		while(!end) {
 		//TODO deserialize the packet. Function?
-		if(testServer.receivePacket(packet)) {
-			testServer.sendACK(packet);
+		DatagramPacket receivedSerialPacket = new DatagramPacket(testServer.buf, testServer.buf.length);
+		if(testServer.receivePacket(receivedSerialPacket) == 1) {
+			testServer.sendACK();
+		} else {
+			testServer.sendEOT();
+			end = true;
+		}
+		
+		
 		}
 		// close the socket and writer
 		testServer.closeWriter();
