@@ -13,4 +13,4 @@ server.class: server.java
 	$(JCC) $(JFLAGS) server.java
 
 clean: 
-	$(RM) *.class *.txt *.log
+	$(RM) packet.class client.class server.class *.txt *.log
