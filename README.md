@@ -33,8 +33,8 @@ Packet class has a  `type` member that specifies what type of packet it is.
 | ------- | ------- |
 |`0`      |ACK      |
 |`1`      |data Packet |
-|`2`      |EOT from server to client |
-|`3`      |EOT from client to server |
+|`2`      |EOT from client to server |
+|`3`      |EOT from server to client |
 
 Packet class also has `seqnum` member that specifies the sequence number of the packet. This must be modulo `%` 8. 
 Values of `seqnum` = `{0, 1, 2, 3, 4, 5, 6, 7}`
