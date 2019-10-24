@@ -20,11 +20,11 @@ public class client {
 	 *********************/
 	private DatagramSocket socket;
 	private byte[] buf = new byte[256];
-	private int expectedACK; 
-	private int sendBase;
+	private int expectedACK = 0; 
+	private int sendBase = 0;
 	private int UDP_Port_receiving;
 	private int UDP_Port_sending;
-	private List<packet> packets;
+	private List<packet> packets = new ArrayList<packet> ();
 	
 	/*********************
 	 * Private functions * 
@@ -78,7 +78,7 @@ public class client {
 		UDP_Port_sending = Integer.parseInt(emulatorSendingPort);
 		
 		//make a list of packets
-		packets = makePackets(filename);
+		makePackets(filename);
 		
 		//open peripherals
 		openSocket();
@@ -99,9 +99,18 @@ public class client {
 	}
 	
 	public void sendPacket() {
-		checkWindow();
+		try {
+			buf = toBytes(packets.get(0));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
-		
+		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		try {
+			socket.send(datagramPacket);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
  
 	public boolean checkWindow() {
@@ -112,26 +121,31 @@ public class client {
 		
 		return ret;
 	}
-	public List<packet> makePackets(String filename) {
-		List<String> packetData = splitEqually(readFile(filename), 30);
+	public void makePackets(String filename) {
+		List<String> packetData = null;
+		try {
+			packetData = splitEqually(readFile(filename), 30);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
-		List<packet> packetList;
 		for(int i = 0; i < packetData.size(); i++) {
 			packet mypacket = new packet(1, expectedACK, packetData.get(i).length(), packetData.get(i));
-			packetList.add(mypacket);
+			packets.add(mypacket);
 			incExpectedACK();
 		}
 		packet mypacket = new packet(3, expectedACK, 0, null);
-		packetList.add(mypacket);
+		packets.add(mypacket);
 		expectedACK = 0;
 		
-		return packetList;
 	}
 	public static void main(String args[]) {
 		
 		//client myclient = new client(args[0], args[1], args[2], args[3]);
 		
 		client testClient = new client("localhost", "6000", "6001", "test.txt");
+		testClient.openSocket();
 		
 		if(testClient.checkWindow()) {
 			testClient.sendPacket();
