@@ -26,8 +26,8 @@ public class server {
 	/*********************
 	 * Private variables * 
 	 *********************/
-	private int UDP_Port_receiving;
-	private int UDP_Port_sending;
+	private int receiveFromEmulator;
+	private int sendToEmulator;
 	private int expected_seqnum;
 	private DatagramSocket socket = null;
 	private byte[] buf = new byte[256];
@@ -72,11 +72,12 @@ public class server {
 		fileHandler.setFormatter(formatter);
 		logger.addHandler(fileHandler);
 		logger.setUseParentHandlers(false); // turns off logging to console
+		
 	}
 	
 	private void openSocket() {
 		try {
-			socket = new DatagramSocket(UDP_Port_receiving);
+			socket = new DatagramSocket(receiveFromEmulator);
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -100,8 +101,8 @@ public class server {
 	// Constructor
 	public server(String emulatorName, String receivingPort, String sendingPort, String outputFileName) {
 		// first parse arguments into variables for later
-		UDP_Port_receiving = Integer.parseInt(receivingPort);
-		UDP_Port_sending = Integer.parseInt(sendingPort);
+		receiveFromEmulator = Integer.parseInt(receivingPort);
+		sendToEmulator = Integer.parseInt(sendingPort);
 		emulator = emulatorName;
 
 		//Open necessary peripherals
@@ -210,12 +211,12 @@ public class server {
 		boolean end = false;
 		// server newServer = new server(args[0], args[1], args[2], args[3]);
 
-		server testServer = new server("localhost", "6000", "6002", "output.txt");
+		server testServer = new server("localhost", "6002", "6000", "output.txt");
 		
 		while(!end) {
 		//TODO deserialize the packet. Function?
 		DatagramPacket receivedSerialPacket = new DatagramPacket(testServer.buf, testServer.buf.length);
-		if(testServer.receivePacket(receivedSerialPacket) == 1) {
+		if(testServer.receivePacket(receivedSerialPacket) == 1) { //returns Type, which if 1 is a data packet, else is EOT
 			testServer.sendACK();
 		} else {
 			testServer.sendEOT();
