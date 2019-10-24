@@ -2,7 +2,10 @@
 
 ## Program Description
 Demonstrate a Go-Back-N Protocol using UDP sockets in Java. Using a provided emulated network link `emulator` that randomly drops packets to simulate an unreliable network. 
-a makefile is included in this project. To use the makefile _**TODO**_
+a makefile is included in this project.
+
+### Makefile
+to use the makefile, first run `make clean` to remove all unnecessary files. Then run `make` which compiles all java files into class files, which can then be run from the command line.
 
 ### Emulator Program (`emulator`)
 Provided by Dr. Maxwell Young as a way to simulate lost/dropped packets. 
