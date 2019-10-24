@@ -49,7 +49,7 @@ public class server {
 		}
 	}
 	
-	private void openLogger() {//TODO ask about how the LOG should be formatted. SimpleFormatter?
+	private void openLogger() {//TODO ask about how the LOG should be formatted. SimpleFormatter? https://stackoverflow.com/questions/15758685/how-to-write-logs-in-text-file-when-using-java-util-logging-logger
 		logger = Logger.getLogger("myLog");
 		try {
 			fileHandler = new FileHandler("arrival.log");
@@ -70,7 +70,6 @@ public class server {
 			e.printStackTrace();
 		}
 	}
-
 
 	private void writeToArrivalLog(int seqnum) {
 		logger.info(String.valueOf(seqnum)); 
@@ -139,7 +138,10 @@ public class server {
 
 		server testServer = new server("localhost", "6000", "6002", "output.txt");
 		
-		
+		//TODO deserialize the packet. Function?
+		if(testServer.receivePacket(packet)) {
+			testServer.sendACK(packet);
+		}
 		// close the socket and writer
 		testServer.closeWriter();
 		testServer.closeSocket();
