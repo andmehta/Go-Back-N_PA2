@@ -19,7 +19,7 @@ public class client {
 	 * Private variables * 
 	 *********************/
 	private DatagramSocket socket;
-	private byte[] = new byte[256];
+	private byte[] buf = new byte[256];
 	private int expectedACK; 
 	private int sendBase;
 	private int UDP_Port_receiving;
@@ -42,7 +42,7 @@ public class client {
 		return sendBase;
 	}
 	
-	private String readFile(String filename) {
+	private String readFile(String filename) throws IOException {
 		String data = "";
 		data = new String (Files.readAllBytes(Paths.get(filename)));
 		
@@ -58,6 +58,15 @@ public class client {
 
 	        return ret;
 	    }
+	 
+	 private void openSocket()  {
+			try {
+				socket = new DatagramSocket(UDP_Port_receiving);
+			} catch (SocketException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	
 	/********************
 	 * Public functions * 
@@ -68,7 +77,12 @@ public class client {
 		UDP_Port_receiving = Integer.parseInt(emulatorReceivingPort);
 		UDP_Port_sending = Integer.parseInt(emulatorSendingPort);
 		
+		//make a list of packets
 		packets = makePackets(filename);
+		
+		//open peripherals
+		openSocket();
+		
 	}
 	
 	public static byte[] toBytes(Object obj) throws IOException {
@@ -118,6 +132,7 @@ public class client {
 		//client myclient = new client(args[0], args[1], args[2], args[3]);
 		
 		client testClient = new client("localhost", "6000", "6001", "test.txt");
+		
 		if(testClient.checkWindow()) {
 			testClient.sendPacket();
 		}
