@@ -6,10 +6,20 @@
  *                      *
  ************************/
 
-import java.net.*;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.io.*;
+import java.util.logging.SimpleFormatter;
 
 public class server {
 
@@ -52,13 +62,14 @@ public class server {
 	
 	private void openLogger() {//TODO ask about how the LOG should be formatted. SimpleFormatter? https://stackoverflow.com/questions/15758685/how-to-write-logs-in-text-file-when-using-java-util-logging-logger
 		logger = Logger.getLogger("myLog");
+		SimpleFormatter formatter = new SimpleFormatter();
 		try {
 			fileHandler = new FileHandler("arrival.log");
 		} catch (SecurityException | IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		fileHandler.setFormatter(formatter);
 		logger.addHandler(fileHandler);
 		logger.setUseParentHandlers(false); // turns off logging to console
 	}
@@ -128,7 +139,6 @@ public class server {
 			if (MaxsPacket.getSeqNum() == expected_seqnum) {
 				moveWindow();
 				writeToTextfile(MaxsPacket.getData());
-				ret = true;
 			}
 			
 			
@@ -138,13 +148,11 @@ public class server {
 			e.printStackTrace();
 		}
 		
-		sendACK(MaxsPacket);
-		
 		return MaxsPacket.getType();
 	}
 
-	public void sendACK(packet packet) {//TODO sendACK back to where it came
-		packet ACK = new packet(0, packet.getSeqNum(), 0, null);
+	public void sendACK() {//TODO sendACK back to where it came
+		packet ACK = new packet(0, expected_seqnum, 0, null);
 		
 		try {
 			buf = toBytes(ACK);
@@ -162,8 +170,8 @@ public class server {
 		}
 	}
 	
-	public void sendEOT(packet packet) {//TODO sendACK back to where it came
-		packet EOT = new packet(2, packet.getSeqNum(), 0, null);
+	public void sendEOT() {//TODO sendACK back to where it came
+		packet EOT = new packet(2, expected_seqnum, 0, null);
 		
 		try {
 			buf = toBytes(EOT);
@@ -208,13 +216,13 @@ public class server {
 		//TODO deserialize the packet. Function?
 		DatagramPacket receivedSerialPacket = new DatagramPacket(testServer.buf, testServer.buf.length);
 		if(testServer.receivePacket(receivedSerialPacket) == 1) {
-			testServer.sendACK(testServer.MaxsPacket);
+			testServer.sendACK();
 		} else {
-		testServer.sendEOT(testServer.MaxsPacket);
+			testServer.sendEOT();
+			end = true;
 		}
 		
 		
-		end = true;
 		}
 		// close the socket and writer
 		testServer.closeWriter();
