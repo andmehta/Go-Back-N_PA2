@@ -26,6 +26,7 @@ public class server {
 	private File outputFile = null;
 	private BufferedWriter writer = null;
 	private String emulator;
+	private packet MaxsPacket = null;
 
 	/*********************
 	 * Private Functions * 
@@ -97,23 +98,87 @@ public class server {
 		openLogger();
 		openWriter(outputFileName);
 	}
+	
+	public static byte[] toBytes(Object obj) throws IOException {
+		ByteArrayOutputStream b = new ByteArrayOutputStream();
+		ObjectOutputStream o = new ObjectOutputStream(b);
+		o.writeObject(obj);
+		return b.toByteArray();
+	}
 
-	public boolean receivePacket(packet packet) {
-		bool ret = false;
-		if (packet.getSeqNum() == expected_seqnum) {
-			moveWindow();
-			writeToTextfile(packet.getData());
-			ret = true;
+	public static packet toPacket(byte[] bytes) throws IOException, ClassNotFoundException {
+		ByteArrayInputStream b = new ByteArrayInputStream(bytes);
+		ObjectInputStream o = new ObjectInputStream(b);
+		packet receivedPacket = (packet) o.readObject();
+		
+		return receivedPacket;
+		
+	}
+	
+	public int receivePacket(DatagramPacket datagramPacket) {
+		try {
+			socket.receive(datagramPacket);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 		
+		try {
+			MaxsPacket = toPacket(datagramPacket.getData());
+			if (MaxsPacket.getSeqNum() == expected_seqnum) {
+				moveWindow();
+				writeToTextfile(MaxsPacket.getData());
+				ret = true;
+			}
+			
+			
+			writeToArrivalLog(MaxsPacket.getSeqNum());
+		} catch (ClassNotFoundException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
-		writeToArrivalLog(packet.getSeqNum());
+		sendACK(MaxsPacket);
 		
-		return ret;
+		return MaxsPacket.getType();
 	}
 
 	public void sendACK(packet packet) {//TODO sendACK back to where it came
-
+		packet ACK = new packet(0, packet.getSeqNum(), 0, null);
+		
+		try {
+			buf = toBytes(ACK);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		try {
+			socket.send(datagramPacket);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void sendEOT(packet packet) {//TODO sendACK back to where it came
+		packet EOT = new packet(2, packet.getSeqNum(), 0, null);
+		
+		try {
+			buf = toBytes(EOT);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		try {
+			socket.send(datagramPacket);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public void closeSocket() {
@@ -134,13 +199,22 @@ public class server {
 	}
 
 	public static void main(String args[]) {
+		boolean end = false;
 		// server newServer = new server(args[0], args[1], args[2], args[3]);
 
 		server testServer = new server("localhost", "6000", "6002", "output.txt");
 		
+		while(!end) {
 		//TODO deserialize the packet. Function?
-		if(testServer.receivePacket(packet)) {
-			testServer.sendACK(packet);
+		DatagramPacket receivedSerialPacket = new DatagramPacket(testServer.buf, testServer.buf.length);
+		if(testServer.receivePacket(receivedSerialPacket) == 1) {
+			testServer.sendACK(testServer.MaxsPacket);
+		} else {
+		testServer.sendEOT(testServer.MaxsPacket);
+		}
+		
+		
+		end = true;
 		}
 		// close the socket and writer
 		testServer.closeWriter();
