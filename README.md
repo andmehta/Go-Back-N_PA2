@@ -7,7 +7,7 @@ a makefile is included in this project.
 ### Makefile
 to use the makefile, first run `make clean` to remove all unnecessary files. Then run `make` which compiles all java files into class files, which can then be run from the command line.
 
-### Emulator Program (`emulator`)
+### Emulator Program (`emulatorDrop`)
 Provided by Dr. Maxwell Young as a way to simulate lost/dropped packets. 
 #### How to call the emulator
 `java emulator <receivePort> <sendToClient-Port> <sendToServer-Port> <clientName> <serverName> <seed> <dropProb> <verbose-mode>`
