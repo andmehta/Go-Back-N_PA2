@@ -10,7 +10,7 @@ to use the makefile, first run `make clean` to remove all unnecessary files. The
 ### Emulator Program (`emulatorDrop`)
 Provided by Dr. Maxwell Young as a way to simulate lost/dropped packets. 
 #### How to call the emulator
-`java emulator <receivePort> <sendToClient-Port> <sendToServer-Port> <clientName> <serverName> <seed> <dropProb> <verbose-mode>`
+`java emulatorDrop <receivePort> <sendToClient-Port> <sendToServer-Port> <clientName> <serverName> <seed> <dropProb> <verbose-mode>`
 
 | input  | Meaning |
 | ------- | ------- |
