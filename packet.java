@@ -6,7 +6,7 @@ public class packet implements
 java.io.Serializable
 {
     
-    private int type;      // 0 if an ACK, 1 if a data packet 2 if EOF, 3 if ACKEOF
+    private int type;      // 0 if an ACK, 1 if a data packet 2 if ACKEOF, 3 if EOF
 	private int seqnum;    // sequence number
 	private int length;    // number of characters carried in data field 
 	private String data;   // should be 0 for ACK packets  
