@@ -152,9 +152,11 @@ public class server {
 		return MaxsPacket;
 	}
 
-	public packet sendACK() {
+	public packet sendACK(packet rcvPacket) {
 		packet ACK = new packet(0, expected_seqnum, 0, null);
-		
+		if(expected_seqnum == rcvPacket.getSeqNum()) {
+			moveWindow();
+		}
 		byte[] sendBuf = new byte[125];
 		try {
 			sendBuf = toBytes(ACK);
@@ -175,7 +177,6 @@ public class server {
 			e.printStackTrace();
 		}
 		
-		moveWindow();
 		return ACK;
 	}
 	
@@ -242,7 +243,7 @@ public class server {
 				System.out.println("received packet num " + rcvPacket.getSeqNum());
 			}
 			if(rcvPacket.getType() == 1) { //1 = data, 3 = EOT
-				packet ACK = testServer.sendACK();
+				packet ACK = testServer.sendACK(rcvPacket);
 				if(VERBOSE) {
 					System.out.println("Sent ACK num " + ACK.getSeqNum() + "\n");
 				}

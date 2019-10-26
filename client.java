@@ -152,19 +152,17 @@ public class client {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
 		DatagramPacket datagramPacket = new DatagramPacket(sendBuf, sendBuf.length, InetAddress.getByName(emulator), UDP_Port_receiving);
 		try {
 			socket.send(datagramPacket);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-		incNextSeqnum();
 		writeToClientSeqnum(packets.get(packetNum).getSeqNum());
+		incNextSeqnum();
 	}
 	
-	public int receiveACK() {
+	public packet receiveACK() {
 		byte[] rcvBuf = new byte[125];
 		DatagramPacket DataACK = new DatagramPacket(rcvBuf, rcvBuf.length);
 		try {
@@ -176,22 +174,16 @@ public class client {
 		packet ACK = null;
 		try {
 			ACK = (packet) toObject(DataACK.getData());
-			if (ACK.getSeqNum() == sendBase) {
-				incSendBase();
-			}
-			
-			
 			writeToClientACK(ACK.getSeqNum());
 		} catch (ClassNotFoundException | IOException e) {
 			e.printStackTrace();
 		}
 		
-		return ACK.getType();
+		return ACK;
 	}
  
 	public boolean checkWindow() {
 		int difference = nextseqnum - sendBase;
-		System.out.println("difference = " + difference + ": " + ((difference != 7) && (difference != -1)));
 		
 		return (difference != 7) && (difference != -1);
 	}
@@ -219,54 +211,76 @@ public class client {
 		
 	}
 	
+	public void printPackets() {
+		for(int i = 0; i < packets.size(); i++) {
+			packets.get(i).printContents();
+		}
+	}
+	
 	public static void main(String args[]) {
 		boolean end = false;
 		boolean VERBOSE = false; 
-		if(true /*args[4] != null*/) { //TEMPORARY true, swap to commented TODO
-			VERBOSE = false;
+		if(true /*args[4] != null*/) { //TODO TEMPORARY true, swap to commented
+			VERBOSE = true;
 		}
 		//client myclient = new client(args[0], args[1], args[2], args[3]);
 		
 		client testClient = new client("localhost", "6000", "6001", "test.txt");
-		
 		
 		if(VERBOSE) {
 			System.out.println("opened client\n");
 		}
 		int packetNum = 0;
 		while(!end) {
-			try {
-				while(testClient.checkWindow() && packetNum < testClient.packets.size()) { 
-					if(VERBOSE) {
-						System.out.println("window open.");
-					}
-					testClient.sendPacket(packetNum);
-					if(VERBOSE) {
-						System.out.println("sent packet: " + packetNum + "\n");
-					}
-					packetNum++;
+			while(testClient.checkWindow() && packetNum < testClient.packets.size()) { 
+				if(VERBOSE) {
+					System.out.println("window open.");
 				}
-			} catch (UnknownHostException e) {
+				try {
+					testClient.sendPacket(packetNum);
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				}
+				if(VERBOSE) {
+						System.out.println("sent packet: " + packetNum + " seqnum: " 
+											+ testClient.packets.get(packetNum).getSeqNum());
+				}
+					
+				packetNum++;
+			} //end while
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			//wait(45); //TODO figure out this timer thing
 			if(VERBOSE) {
 				if(!testClient.checkWindow()) {
 					System.out.println("window closed.");
 				}
 				System.out.println("Wait for ACK");
 			}
-			if(testClient.receiveACK() == 2) { //returns packet.type, which if 2 is EOT
-				end = true; 
+			packet ACK = testClient.receiveACK();
+			if(VERBOSE) {
+				System.out.println("received ACK\n");
+				ACK.printContents();
+			}
+			if(ACK.getSeqNum() == testClient.packets.get(0).getSeqNum()) { //if ACK is seqnum expected
+				testClient.packets.remove(0);
+				packetNum--; //removed a packet, make sure to decrement packetNum
+				testClient.incSendBase();
 				if(VERBOSE) {
-					System.out.println("received EOTACK\n");
+					System.out.println("popped packet" + " seqnum: " + ACK.getSeqNum());
 				}
+				if(ACK.getType() == 2) { //ACK of EOT
+					end = true;
+					if(VERBOSE) {
+						System.out.println("received EOTACK\n");
+					}
+				}	
 			} else {
-				//TODO NOthing for now;
-				if(VERBOSE) {
-					System.out.println("received ACK\n");
-				}
-			}	
+				//testClient.nextseqnum = ACK.getSeqNum();
+				packetNum = 0;
+			}
 		} //end while
 		
 		//out of the while, close writers and socket
