@@ -1,16 +1,16 @@
 # Go-Back-N_PA2
 
 ## Program Description
-Demonstrate a Go-Back-N Protocol using UDP sockets in Java. Using a provided emulated network link `emulatorDrop` that randomly drops packets to simulate an unreliable network. 
+Demonstrate a Go-Back-N Protocol using UDP sockets in Java. Using a provided emulated network link `emulator` that randomly drops packets to simulate an unreliable network. 
 a makefile is included in this project.
 
 ### Makefile
 to use the makefile, first run `make clean` to remove all unnecessary files. Then run `make` which compiles all java files into class files, which can then be run from the command line.
 
-### Emulator Program (`emulatorDrop`)
+### Emulator Program (`emulator`)
 Provided by Dr. Maxwell Young as a way to simulate lost/dropped packets. 
 #### How to call the emulator
-`java emulatorDrop <receivePort> <sendToClient-Port> <sendToServer-Port> <clientName> <serverName> <seed> <dropProb> <verbose-mode>`
+`java emulator <receivePort> <sendToClient-Port> <sendToServer-Port> <clientName> <serverName> <seed> <dropProb> <verbose-mode>`
 
 | input  | Meaning |
 | ------- | ------- |
@@ -25,7 +25,7 @@ Provided by Dr. Maxwell Young as a way to simulate lost/dropped packets.
 
 
 #### Example of an emulator call
-`java emulatorDrop 6000 6001 6002 localhost localhost 0 0.0 1`
+`java emulator 6000 6001 6002 localhost localhost 0 0.0 1`
 
 ### Packet class (`packet`)
 A `packet` class is provided and must be used. No modifications allowed. 
@@ -43,7 +43,7 @@ Packet class also has `seqnum` member that specifies the sequence number of the 
 Values of `seqnum` = `{0, 1, 2, 3, 4, 5, 6, 7}`
 
 ### Client program (`client`)
-Made by students. Takes a text file and sends 30 char chunks of the data to the emulated network `emulatorDrop`. Utilizes the sliding door technique Go-Back-N to ensure reliable data transfer. 
+Made by students. Takes a text file and sends 30 char chunks of the data to the emulated network `emulator`. Utilizes the sliding door technique Go-Back-N to ensure reliable data transfer. 
 
 #### GBN client side breakdown
 * the client checks the window if it is full, if not send data packets. 
