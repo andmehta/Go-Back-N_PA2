@@ -30,7 +30,7 @@ public class server {
 	 *********************/
 	private int receiveFromEmulator;
 	private int sendToEmulator;
-	private int expected_seqnum;
+	private int expected_seqnum = 0;
 	private DatagramSocket socket = null;
 	private BufferedWriter writer = null;
 	private BufferedWriter LogWriter = null;
@@ -41,12 +41,15 @@ public class server {
 	 * Private Functions * 
 	 *********************/
 	private void writeToTextfile(String info) {
+		System.out.println("writeToTextfile function");
 		try {
 			if(firstWrite) {
 				writer.write(info);
 				firstWrite = false;
+				System.out.println("write");
 			} else {
 				writer.append(info);
+				System.out.println("append");
 			}
 		} catch (IOException io) {
 			io.printStackTrace();
@@ -82,7 +85,7 @@ public class server {
 	private void writeToArrivalLog(int seqnum) {
 		try {
 			LogWriter.write(seqnum + "\n");
-			//LogWriter.flush();
+			LogWriter.flush();
 		} catch (IOException io) {
 			io.printStackTrace();
 		}
@@ -90,7 +93,6 @@ public class server {
 
 	private int moveWindow() {
 		expected_seqnum = (expected_seqnum + 1) % 8;
-
 		return expected_seqnum;
 	}
 
@@ -125,7 +127,7 @@ public class server {
 		return o.readObject();
 	}
 	
-	public int receivePacket(DatagramPacket datagramPacket) {
+	public packet receivePacket(DatagramPacket datagramPacket) {
 		try {
 			socket.receive(datagramPacket);
 		} catch (IOException e1) {
@@ -136,7 +138,7 @@ public class server {
 		packet MaxsPacket = null;
 		try {
 			MaxsPacket = (packet) toObject(datagramPacket.getData());
-			if (MaxsPacket.getSeqNum() == expected_seqnum) {
+			if (MaxsPacket.getSeqNum() == expected_seqnum && MaxsPacket.getType() == 1) {
 				writeToTextfile(MaxsPacket.getData());
 			}
 			
@@ -146,10 +148,11 @@ public class server {
 			e.printStackTrace();
 		}
 		
-		return MaxsPacket.getType();
+		
+		return MaxsPacket;
 	}
 
-	public void sendACK() {//TODO sendACK back to where it came
+	public packet sendACK() {
 		packet ACK = new packet(0, expected_seqnum, 0, null);
 		
 		byte[] sendBuf = new byte[125];
@@ -171,10 +174,12 @@ public class server {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 		moveWindow();
+		return ACK;
 	}
 	
-	public void sendEOT() {//TODO sendACK back to where it came
+	public packet sendEOT() {
 		packet EOT = new packet(2, expected_seqnum, 0, null);
 		
 		byte[] sendBuf = new byte[125];
@@ -196,6 +201,8 @@ public class server {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		return EOT;
 	}
 
 	public void closeSocket() {
@@ -214,9 +221,8 @@ public class server {
 	public static void main(String args[]) {
 		boolean end = false;
 		boolean VERBOSE = false; 
-		int count = 0;
 		if(true /*args[4] != null*/) { //TEMPORARY true, swap to commented TODO
-			VERBOSE = false;
+			VERBOSE = true;
 		}
 		// server newServer = new server(args[0], args[1], args[2], args[3]);
 
@@ -231,17 +237,20 @@ public class server {
 			if(VERBOSE) {
 				System.out.println("waiting to receive packet");
 			}
-			if(testServer.receivePacket(receivedSerialPacket) == 1) { //returns Type, which if 1 is a data packet, else is EOT
+			packet rcvPacket = testServer.receivePacket(receivedSerialPacket);
+			if(VERBOSE) {
+				System.out.println("received packet num " + rcvPacket.getSeqNum());
+			}
+			if(rcvPacket.getType() == 1) { //1 = data, 3 = EOT
+				packet ACK = testServer.sendACK();
 				if(VERBOSE) {
-					count++;
-					System.out.println("received packet num " + count);
-				}
-				testServer.sendACK();
-				if(VERBOSE) {
-					System.out.println("Sent ACK num " + count + "\n");
+					System.out.println("Sent ACK num " + ACK.getSeqNum() + "\n");
 				}
 			} else {
-				testServer.sendEOT();
+				packet EOT = testServer.sendEOT();
+				if(VERBOSE) {
+					System.out.println("Sent ACKEOT. Seqnum: " + EOT.getSeqNum() + "\n");
+				}
 				end = true;
 			}
 		
