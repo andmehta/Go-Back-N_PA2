@@ -41,15 +41,12 @@ public class server {
 	 * Private Functions * 
 	 *********************/
 	private void writeToTextfile(String info) {
-		System.out.println("writeToTextfile function");
 		try {
 			if(firstWrite) {
 				writer.write(info);
 				firstWrite = false;
-				System.out.println("write");
 			} else {
 				writer.append(info);
-				System.out.println("append");
 			}
 		} catch (IOException io) {
 			io.printStackTrace();
@@ -59,7 +56,7 @@ public class server {
 	private void openWriter(String outputFileName) {
 		File outputFile = new File(outputFileName);
 		try {
-			writer = new BufferedWriter(new FileWriter(outputFileName, true));
+			writer = new BufferedWriter(new FileWriter(outputFileName, false));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -68,7 +65,7 @@ public class server {
 	private void openLogger(String outputFileName) {
 		File outputFileLog = new File(outputFileName);
 		try {
-			LogWriter = new BufferedWriter(new FileWriter(outputFileName, true));
+			LogWriter = new BufferedWriter(new FileWriter(outputFileName, false));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -221,13 +218,10 @@ public class server {
 
 	public static void main(String args[]) {
 		boolean end = false;
-		boolean VERBOSE = false; 
-		if(true /*args[4] != null*/) { //TEMPORARY true, swap to commented TODO
-			VERBOSE = true;
-		}
-		// server newServer = new server(args[0], args[1], args[2], args[3]);
-
-		server testServer = new server("localhost", "6002", "6000", "output.txt");
+		boolean VERBOSE = false; //exists for testing
+		
+		server testServer = new server(args[0], args[1], args[2], args[3]);
+		//server testServer = new server("localhost", "6002", "6000", "output.txt");
 		
 		if(VERBOSE) {
 			System.out.println("opened Server");
@@ -254,7 +248,6 @@ public class server {
 				}
 				end = true;
 			}
-		
 		}
 		// close the socket and writers
 		testServer.closeWriters();

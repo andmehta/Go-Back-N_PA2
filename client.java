@@ -145,10 +145,10 @@ public class client {
 		return o.readObject();
 	}
 	
-	public void sendPacket(int packetNum) throws UnknownHostException {
+	public void sendPacket(packet sendPacket) throws UnknownHostException {
 		byte[] sendBuf = new byte[125];
 		try {
-			sendBuf = toBytes(packets.get(packetNum)); 
+			sendBuf = toBytes(sendPacket); 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -158,8 +158,9 @@ public class client {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		writeToClientSeqnum(packets.get(packetNum).getSeqNum());
+		writeToClientSeqnum(sendPacket.getSeqNum());
 		incNextSeqnum();
+//		assert(nextseqnum == packets.get(packetNum).getSeqNum());
 	}
 	
 	public packet receiveACK() {
@@ -183,7 +184,7 @@ public class client {
 	}
  
 	public boolean checkWindow() {
-		int difference = nextseqnum - sendBase;
+		int difference = windowSize();
 		
 		return (difference != 7) && (difference != -1);
 	}
@@ -219,13 +220,11 @@ public class client {
 	
 	public static void main(String args[]) {
 		boolean end = false;
-		boolean VERBOSE = false; 
-		if(true /*args[4] != null*/) { //TODO TEMPORARY true, swap to commented
-			VERBOSE = true;
-		}
-		//client myclient = new client(args[0], args[1], args[2], args[3]);
+		boolean VERBOSE = false; //exists for testing 
+		List<packet> sentPackets = new ArrayList<packet> ();
+		client testClient = new client(args[0], args[1], args[2], args[3]);
 		
-		client testClient = new client("localhost", "6000", "6001", "test.txt");
+		//client testClient = new client("localhost", "6000", "6001", "test.txt");
 		
 		if(VERBOSE) {
 			System.out.println("opened client\n");
@@ -237,10 +236,11 @@ public class client {
 					System.out.println("window open.");
 				}
 				try {
-					testClient.sendPacket(packetNum);
+					testClient.sendPacket(testClient.packets.get(packetNum));
 				} catch (UnknownHostException e) {
 					e.printStackTrace();
 				}
+				sentPackets.add(testClient.packets.get(packetNum));
 				if(VERBOSE) {
 						System.out.println("sent packet: " + packetNum + " seqnum: " 
 											+ testClient.packets.get(packetNum).getSeqNum());
@@ -249,6 +249,9 @@ public class client {
 				packetNum++;
 			} //end while
 			try {
+				if(VERBOSE) {
+					System.out.println("\n-----SLEEP-----\n");
+				}
 				Thread.sleep(500);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
@@ -261,12 +264,11 @@ public class client {
 			}
 			packet ACK = testClient.receiveACK();
 			if(VERBOSE) {
-				System.out.println("received ACK\n");
+				System.out.println("received ACK. ACK = ");
 				ACK.printContents();
 			}
-			if(ACK.getSeqNum() == testClient.packets.get(0).getSeqNum()) { //if ACK is seqnum expected
-				testClient.packets.remove(0);
-				packetNum--; //removed a packet, make sure to decrement packetNum
+			if(ACK.getSeqNum() == sentPackets.get(0).getSeqNum()) { //if ACK is seqnum expected
+				sentPackets.remove(0);
 				testClient.incSendBase();
 				if(VERBOSE) {
 					System.out.println("popped packet" + " seqnum: " + ACK.getSeqNum());
@@ -278,8 +280,16 @@ public class client {
 					}
 				}	
 			} else {
-				//testClient.nextseqnum = ACK.getSeqNum();
-				packetNum = 0;
+				if(VERBOSE) {
+					System.out.println("------BAD ACK------");
+					System.out.println("sending sentPackets.get(0)");
+				}
+				try {
+					testClient.sendPacket(sentPackets.get(0));
+				} catch (UnknownHostException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		} //end while
 		
