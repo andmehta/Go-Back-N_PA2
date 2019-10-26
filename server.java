@@ -16,7 +16,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
@@ -30,62 +32,60 @@ public class server {
 	private int sendToEmulator;
 	private int expected_seqnum;
 	private DatagramSocket socket = null;
-	private byte[] buf = new byte[256];
-	private Logger logger = null;
-	private FileHandler fileHandler = null;
-	private File outputFile = null;
 	private BufferedWriter writer = null;
+	private BufferedWriter LogWriter = null;
 	private String emulator;
-	private packet MaxsPacket = null;
+	private boolean firstWrite = true;
 
 	/*********************
 	 * Private Functions * 
 	 *********************/
 	private void writeToTextfile(String info) {
 		try {
-			writer.write(info);
-			writer.flush();
+			if(firstWrite) {
+				writer.write(info);
+				firstWrite = false;
+			} else {
+				writer.append(info);
+			}
 		} catch (IOException io) {
 			io.printStackTrace();
 		}
 	}
 	
 	private void openWriter(String outputFileName) {
-		outputFile = new File(outputFileName);
+		File outputFile = new File(outputFileName);
 		try {
-			writer = new BufferedWriter(new FileWriter(outputFileName, false));
+			writer = new BufferedWriter(new FileWriter(outputFileName, true));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 	
-	private void openLogger() {//TODO ask about how the LOG should be formatted. SimpleFormatter? https://stackoverflow.com/questions/15758685/how-to-write-logs-in-text-file-when-using-java-util-logging-logger
-		logger = Logger.getLogger("myLog");
-		SimpleFormatter formatter = new SimpleFormatter();
+	private void openLogger(String outputFileName) {
+		File outputFileLog = new File(outputFileName);
 		try {
-			fileHandler = new FileHandler("arrival.log");
-		} catch (SecurityException | IOException e) {
-			// TODO Auto-generated catch block
+			LogWriter = new BufferedWriter(new FileWriter(outputFileName, true));
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		fileHandler.setFormatter(formatter);
-		logger.addHandler(fileHandler);
-		logger.setUseParentHandlers(false); // turns off logging to console
-		
 	}
 	
 	private void openSocket() {
 		try {
 			socket = new DatagramSocket(receiveFromEmulator);
 		} catch (SocketException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	private void writeToArrivalLog(int seqnum) {
-		logger.info(String.valueOf(seqnum)); 
+		try {
+			LogWriter.write(seqnum + "\n");
+			//LogWriter.flush();
+		} catch (IOException io) {
+			io.printStackTrace();
+		}
 	}
 
 	private int moveWindow() {
@@ -107,45 +107,42 @@ public class server {
 
 		//Open necessary peripherals
 		openSocket();
-		openLogger();
+		openLogger("arrival.log");
 		openWriter(outputFileName);
 	}
 	
 	public static byte[] toBytes(Object obj) throws IOException {
-		ByteArrayOutputStream b = new ByteArrayOutputStream();
-		ObjectOutputStream o = new ObjectOutputStream(b);
-		o.writeObject(obj);
-		return b.toByteArray();
+		ByteArrayOutputStream oSt = new ByteArrayOutputStream();
+		ObjectOutputStream ooSt = new ObjectOutputStream(oSt);
+		ooSt.writeObject(obj);
+		ooSt.flush();
+		return oSt.toByteArray();
 	}
 
-	public static packet toPacket(byte[] bytes) throws IOException, ClassNotFoundException {
+	public static Object toObject(byte[] bytes) throws IOException, ClassNotFoundException {
 		ByteArrayInputStream b = new ByteArrayInputStream(bytes);
 		ObjectInputStream o = new ObjectInputStream(b);
-		packet receivedPacket = (packet) o.readObject();
-		
-		return receivedPacket;
-		
+		return o.readObject();
 	}
 	
 	public int receivePacket(DatagramPacket datagramPacket) {
 		try {
 			socket.receive(datagramPacket);
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
+			System.err.println("socket.receive");
 		}
 		
+		packet MaxsPacket = null;
 		try {
-			MaxsPacket = toPacket(datagramPacket.getData());
+			MaxsPacket = (packet) toObject(datagramPacket.getData());
 			if (MaxsPacket.getSeqNum() == expected_seqnum) {
-				moveWindow();
 				writeToTextfile(MaxsPacket.getData());
 			}
 			
 			
 			writeToArrivalLog(MaxsPacket.getSeqNum());
 		} catch (ClassNotFoundException | IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -155,37 +152,48 @@ public class server {
 	public void sendACK() {//TODO sendACK back to where it came
 		packet ACK = new packet(0, expected_seqnum, 0, null);
 		
+		byte[] sendBuf = new byte[125];
 		try {
-			buf = toBytes(ACK);
+			sendBuf = toBytes(ACK);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		DatagramPacket datagramPacket = null;
+		try {
+			datagramPacket = new DatagramPacket(sendBuf, sendBuf.length, InetAddress.getByName(emulator), sendToEmulator);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		try {
 			socket.send(datagramPacket);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		moveWindow();
 	}
 	
 	public void sendEOT() {//TODO sendACK back to where it came
 		packet EOT = new packet(2, expected_seqnum, 0, null);
 		
+		byte[] sendBuf = new byte[125];
 		try {
-			buf = toBytes(EOT);
+			sendBuf = toBytes(EOT);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		DatagramPacket datagramPacket = new DatagramPacket(buf, buf.length);
+		DatagramPacket datagramPacket = null;
+		try {
+			datagramPacket = new DatagramPacket(sendBuf, sendBuf.length, InetAddress.getByName(emulator), sendToEmulator);
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		try {
 			socket.send(datagramPacket);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -194,39 +202,55 @@ public class server {
 		socket.close();
 	}
 	
-	public void closeWriter() {
+	public void closeWriters() {
 		try {
 			writer.close();
+			LogWriter.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
-	public void testLog(String info) { 
-		logger.info(info);
-	}
-
 	public static void main(String args[]) {
 		boolean end = false;
+		boolean VERBOSE = false; 
+		int count = 0;
+		if(true /*args[4] != null*/) { //TEMPORARY true, swap to commented TODO
+			VERBOSE = false;
+		}
 		// server newServer = new server(args[0], args[1], args[2], args[3]);
 
 		server testServer = new server("localhost", "6002", "6000", "output.txt");
 		
+		if(VERBOSE) {
+			System.out.println("opened Server");
+		}
 		while(!end) {
-		//TODO deserialize the packet. Function?
-		DatagramPacket receivedSerialPacket = new DatagramPacket(testServer.buf, testServer.buf.length);
-		if(testServer.receivePacket(receivedSerialPacket) == 1) { //returns Type, which if 1 is a data packet, else is EOT
-			testServer.sendACK();
-		} else {
-			testServer.sendEOT();
-			end = true;
-		}
+			byte[] rcvBuf = new byte[125];
+			DatagramPacket receivedSerialPacket = new DatagramPacket(rcvBuf, rcvBuf.length);
+			if(VERBOSE) {
+				System.out.println("waiting to receive packet");
+			}
+			if(testServer.receivePacket(receivedSerialPacket) == 1) { //returns Type, which if 1 is a data packet, else is EOT
+				if(VERBOSE) {
+					count++;
+					System.out.println("received packet num " + count);
+				}
+				testServer.sendACK();
+				if(VERBOSE) {
+					System.out.println("Sent ACK num " + count + "\n");
+				}
+			} else {
+				testServer.sendEOT();
+				end = true;
+			}
 		
-		
 		}
-		// close the socket and writer
-		testServer.closeWriter();
+		// close the socket and writers
+		testServer.closeWriters();
 		testServer.closeSocket();
+		if(VERBOSE) {
+			System.out.println("closed sockets and writers. Exiting server");
+		}
 	}
 }
