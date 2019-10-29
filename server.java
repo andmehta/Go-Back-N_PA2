@@ -1,10 +1,12 @@
-
-/************************
- *                      *
- * Andrew Mehta am3258  *
- * Jake Manning jsm652  *
- *                      *
- ************************/
+/*
+* Andrew Mehta (amasdf)
+* Jake Manning (jsm652)
+* Data Communication and Networking
+* Programming Assignment #2 : GBN Implementation
+* 10/28/2019
+*
+* Server File
+*/
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -25,9 +27,8 @@ import java.util.logging.SimpleFormatter;
 
 public class server {
 
-	/*********************
-	 * Private variables * 
-	 *********************/
+	//------------------- Private Variable Definitions -------------------//
+    
 	private int receiveFromEmulator;
 	private int sendToEmulator;
 	private int expected_seqnum = 0;
@@ -37,9 +38,9 @@ public class server {
 	private String emulator;
 	private boolean firstWrite = true;
 
-	/*********************
-	 * Private Functions * 
-	 *********************/
+	//------------------- Begin Private Function Definitions -------------------//
+    
+    //--- writeToTextfile - Inputs a string that is then written to the open file. No return.
 	private void writeToTextfile(String info) {
 		try {
 			if(firstWrite) {
@@ -52,7 +53,7 @@ public class server {
 			io.printStackTrace();
 		}
 	}
-	
+	//--- openWriter - Inputs a file name and opens the writer. No return.
 	private void openWriter(String outputFileName) {
 		File outputFile = new File(outputFileName);
 		try {
@@ -61,7 +62,7 @@ public class server {
 			e.printStackTrace();
 		}
 	}
-	
+	//--- openLogger - Inputs the filename for the log file and uses it to open another writer. No return.
 	private void openLogger(String outputFileName) {
 		File outputFileLog = new File(outputFileName);
 		try {
@@ -70,7 +71,7 @@ public class server {
 			e.printStackTrace();
 		}
 	}
-	
+	//--- openSocket - Opens the datagram socket to receive data. No return.
 	private void openSocket() {
 		try {
 			socket = new DatagramSocket(receiveFromEmulator);
@@ -78,7 +79,7 @@ public class server {
 			e.printStackTrace();
 		}
 	}
-
+    //--- writetoArrivalLog - Inputs the received sequence number and write it to the arrival log file. No return.
 	private void writeToArrivalLog(int seqnum) {
 		try {
 			LogWriter.write(seqnum + "\n");
@@ -87,17 +88,20 @@ public class server {
 			io.printStackTrace();
 		}
 	}
-
+    //--- moveWindow - This calculates the expected sequence number. Returns the expected sequence number as an interger.
 	private int moveWindow() {
 		expected_seqnum = (expected_seqnum + 1) % 8;
 		return expected_seqnum;
 	}
 
-	/********************
-	 * Public Functions * 
-	 ********************/
+    //------------------- End Private Function Definitions -------------------//
+     
+            
+     
+     
+    //------------------- Begin Public Function Definitions -------------------//
 
-	// Constructor
+	// Class Constructor - has 4 inputs
 	public server(String emulatorName, String receivingPort, String sendingPort, String outputFileName) {
 		// first parse arguments into variables for later
 		receiveFromEmulator = Integer.parseInt(receivingPort);
@@ -109,7 +113,7 @@ public class server {
 		openLogger("arrival.log");
 		openWriter(outputFileName);
 	}
-	
+	//--- toBytes - Serializes the data in preparation to send. Returns the serialized data as a byte.
 	public static byte[] toBytes(Object obj) throws IOException {
 		ByteArrayOutputStream oSt = new ByteArrayOutputStream();
 		ObjectOutputStream ooSt = new ObjectOutputStream(oSt);
@@ -117,13 +121,13 @@ public class server {
 		ooSt.flush();
 		return oSt.toByteArray();
 	}
-
+    //--- toObject - Deserializes the data after receiving it. Returns the deserialized data as an object.
 	public static Object toObject(byte[] bytes) throws IOException, ClassNotFoundException {
 		ByteArrayInputStream b = new ByteArrayInputStream(bytes);
 		ObjectInputStream o = new ObjectInputStream(b);
 		return o.readObject();
 	}
-	
+	//--- receivePacket - Inputs a datagram packet and receives a packet from the client. No return.
 	public packet receivePacket(DatagramPacket datagramPacket) {
 		try {
 			socket.receive(datagramPacket);
@@ -148,7 +152,7 @@ public class server {
 		
 		return MaxsPacket;
 	}
-
+    //--- sendACK - Inputs the received datagram packet and checks the sequence number. If correct, it sends the appropiate ACK. No return.
 	public packet sendACK(packet rcvPacket) {
 		packet ACK = new packet(0, expected_seqnum, 0, null);
 		if(expected_seqnum == rcvPacket.getSeqNum()) {
@@ -176,7 +180,7 @@ public class server {
 		
 		return ACK;
 	}
-	
+	//--- sendEOT - Called when the EOT occurs. Returns a packet of the EOT.
 	public packet sendEOT() {
 		packet EOT = new packet(2, expected_seqnum, 0, null);
 		
@@ -202,11 +206,11 @@ public class server {
 		
 		return EOT;
 	}
-
+    //--- closeSocket - Closes the open datagram socket. No return.
 	public void closeSocket() {
 		socket.close();
 	}
-	
+	//--- closeWriters - Closes the open writer files. No return.
 	public void closeWriters() {
 		try {
 			writer.close();
